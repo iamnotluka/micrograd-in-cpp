@@ -3,12 +3,9 @@
 
 Value::Value(double data) : data_(data) {}
 
-double Value::data() const {
-    return data_;
-}
-
 int main() {
-    Value v(10);
-    std::cout << v.data() << std::endl;
+    Value a(10);
+    Value b(5);
+    std::cout << (a + b).data() << std::endl;
     return 0;
 };
