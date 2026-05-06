@@ -46,3 +46,4 @@ dist/
 .env.*.local
 
 CLAUDE.md
+main
