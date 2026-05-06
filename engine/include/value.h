@@ -11,6 +11,7 @@ class Value {
         static std::shared_ptr<Value> create(double data, char label) {
             auto new_value = std::make_shared<Value>(data);
             new_value->label_ = label;
+            new_value->grad_ = 0;
             return new_value;
         };
 
@@ -18,6 +19,7 @@ class Value {
             std::shared_ptr<Value> new_value = std::make_shared<Value>(data);
             new_value->prev_ = prev;
             new_value->op_ = op;
+            new_value->grad_ = 0;
             return new_value;
         };
 
@@ -41,12 +43,29 @@ class Value {
             return prev_;
         }
 
+        double grad() const {
+            return grad_;
+        }
+
+        void set_grad(double grad) {
+            grad_ = grad;
+        }
+
     private:
         double data_;
         std::vector<std::shared_ptr<Value>> prev_;
         char op_;
         char label_;
+        double grad_;
 };
+
+inline std::shared_ptr<Value> operator+(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
+    return Value::create(a->data() + b->data(), {a, b}, '+');
+}
+
+inline std::shared_ptr<Value> operator*(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
+    return Value::create(a->data() * b->data(), {a, b}, '*');
+}
 
 inline std::ostream& operator<<(std::ostream& os, const std::shared_ptr<Value>& value) {
     os << "Value(" << value->data() << ", op: " << value->op() << ", ";
@@ -56,12 +75,4 @@ inline std::ostream& operator<<(std::ostream& os, const std::shared_ptr<Value>& 
     }
     os << "]";
     return os;
-}
-
-inline std::shared_ptr<Value> operator+(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
-    return Value::create(a->data() + b->data(), {a, b}, '+');
-}
-
-inline std::shared_ptr<Value> operator*(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
-    return Value::create(a->data() * b->data(), {a, b}, '*');
 }

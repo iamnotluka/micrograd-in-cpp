@@ -14,7 +14,7 @@ int build_dot_graph(const std::shared_ptr<Value>& node, int& node_counter, std::
         label_str += node->label();
         label_str += " | ";
     }
-    dot_graph_string += std::string("    \"") + node_name + "\" [label=\"" + label_str + "data " + std::to_string(node->data()) + "\", shape=record];\n";
+    dot_graph_string += std::string("    \"") + node_name + "\" [label=\"" + label_str + "data " + std::to_string(node->data()) + " | grad " + std::to_string(node->grad()) + "\", shape=record];\n";
 
     if (!node->prev().empty()) {
         std::string op_name = std::string("op") + std::to_string(node_id);
