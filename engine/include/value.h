@@ -11,6 +11,12 @@ class Value {
             return std::make_shared<Value>(data);
         };
 
+        static std::shared_ptr<Value> create(double data, const std::vector<std::shared_ptr<Value>>& children) {
+            std::shared_ptr<Value> new_value = std::make_shared<Value>(data);
+            new_value->children_ = children;
+            return new_value;
+        };
+
         double data() const {
            return data_;
         }
@@ -26,9 +32,9 @@ std::ostream& operator<<(std::ostream& os, const std::shared_ptr<Value>& value) 
 }
 
 std::shared_ptr<Value> operator+(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
-    return Value::create(a->data() + b->data());
+    return Value::create(a->data() + b->data(), {a, b});
 }
 
 std::shared_ptr<Value> operator*(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
-    return Value::create(a->data() * b->data());
+    return Value::create(a->data() * b->data(), {a, b});
 }
