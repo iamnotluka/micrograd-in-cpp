@@ -2,6 +2,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <string>
 
 class Value {
     public:
@@ -36,7 +37,7 @@ class Value {
         char op_;
 };
 
-std::ostream& operator<<(std::ostream& os, const std::shared_ptr<Value>& value) {
+inline std::ostream& operator<<(std::ostream& os, const std::shared_ptr<Value>& value) {
     os << "Value(" << value->data() << ", op: " << value->op() << ", ";
     for (int i = 0; i < value->prev().size(); i++) {
         os << "Value(" << value->prev()[i]->data() << ")";
@@ -46,10 +47,10 @@ std::ostream& operator<<(std::ostream& os, const std::shared_ptr<Value>& value) 
     return os;
 }
 
-std::shared_ptr<Value> operator+(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
+inline std::shared_ptr<Value> operator+(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
     return Value::create(a->data() + b->data(), {a, b}, '+');
 }
 
-std::shared_ptr<Value> operator*(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
+inline std::shared_ptr<Value> operator*(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
     return Value::create(a->data() * b->data(), {a, b}, '*');
 }
