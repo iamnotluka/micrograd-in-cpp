@@ -4,15 +4,23 @@
 #include <fstream>
 
 int main() {
-    auto a = Value::create(10);
-    auto b = Value::create(5);
-    auto c = Value::create(4);
+    auto a = Value::create(-3, 'a');
+    auto b = Value::create(2, 'b');
+    auto c = Value::create(10, 'c');
 
-    auto result = a*b + c;
-    std::cout << result << std::endl;
+    auto e = a*b;
+    e->set_label('e');
+
+    auto d = e + c;
+    d->set_label('d');
+
+    auto f = Value::create(-2, 'f');
+    auto L = d*f; L->set_label('L');
+
+    std::cout << L << std::endl;
 
     std::ofstream file("graph.dot");
-    file << create_dot_graph_string(result);
+    file << create_dot_graph_string(L);
     file.close();
 
     return 0;

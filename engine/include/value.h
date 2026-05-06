@@ -8,8 +8,10 @@ class Value {
     public:
         Value(double data) : data_(data) {}
 
-        static std::shared_ptr<Value> create(double data) {
-            return std::make_shared<Value>(data);
+        static std::shared_ptr<Value> create(double data, char label) {
+            auto new_value = std::make_shared<Value>(data);
+            new_value->label_ = label;
+            return new_value;
         };
 
         static std::shared_ptr<Value> create(double data, const std::vector<std::shared_ptr<Value>>& prev, char op) {
@@ -27,6 +29,14 @@ class Value {
             return op_;
         }
 
+        char label() const {
+            return label_;
+        }
+
+        void set_label(char label) {
+            label_ = label;
+        }
+
         std::vector<std::shared_ptr<Value>> prev() const {
             return prev_;
         }
@@ -35,6 +45,7 @@ class Value {
         double data_;
         std::vector<std::shared_ptr<Value>> prev_;
         char op_;
+        char label_;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const std::shared_ptr<Value>& value) {
