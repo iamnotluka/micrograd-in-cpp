@@ -11,9 +11,9 @@ class Value {
             return std::make_shared<Value>(data);
         };
 
-        static std::shared_ptr<Value> create(double data, const std::vector<std::shared_ptr<Value>>& children) {
+        static std::shared_ptr<Value> create(double data, const std::vector<std::shared_ptr<Value>>& prev) {
             std::shared_ptr<Value> new_value = std::make_shared<Value>(data);
-            new_value->children_ = children;
+            new_value->prev_ = prev;
             return new_value;
         };
 
@@ -23,7 +23,7 @@ class Value {
 
     private:
         double data_;
-        std::vector<std::shared_ptr<Value>> children_;
+        std::vector<std::shared_ptr<Value>> prev_;
 };
 
 std::ostream& operator<<(std::ostream& os, const std::shared_ptr<Value>& value) {
