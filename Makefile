@@ -1,5 +1,5 @@
 build:
-	clang++ -std=c++17 -I engine/include engine/src/main.cpp engine/src/graph.cpp -o main
+	clang++ -std=c++17 -I engine/include engine/src/main.cpp -o main
 
 run:
 	@if [ -f main ]; then ./main; else echo "No binary found. Run 'make build' first."; fi
