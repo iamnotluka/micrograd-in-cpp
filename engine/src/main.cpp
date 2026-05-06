@@ -9,6 +9,6 @@ int main() {
     Value b(5);
     Value c(4);
 
-    std::cout << (a*b + c).data() << std::endl;
+    std::cout << a*b + c << std::endl;
     return 0;
 };

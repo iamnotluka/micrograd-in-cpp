@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 
 class Value {
     public:
@@ -19,3 +20,8 @@ class Value {
     private:
         double data_;
 };
+
+std::ostream& operator<<(std::ostream& os, const Value& value) {
+    os << "Value(" << value.data() << ")";
+    return os;
+}
