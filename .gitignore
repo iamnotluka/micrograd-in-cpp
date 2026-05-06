@@ -1,0 +1,48 @@
+# macOS
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Personal notes (not for distribution)
+docs/
+
+# C++ build artefacts
+build/
+out/
+bin/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.pdb
+*.ilk
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+CMakeUserPresets.json
+cmake_install.cmake
+compile_commands.json
+
+# WASM / Emscripten
+*.wasm
+*.wasm.map
+*.wast
+
+# Web frontend (if/when added)
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+
+CLAUDE.md
