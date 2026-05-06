@@ -1,27 +1,34 @@
 #pragma once
 #include <iostream>
+#include <memory>
+#include <vector>
 
 class Value {
     public:
-        Value(double data);
+        Value(double data) : data_(data) {}
+
+        static std::shared_ptr<Value> create(double data) {
+            return std::make_shared<Value>(data);
+        };
 
         double data() const {
            return data_;
         }
 
-        Value operator+(const Value& other) const {
-            return Value(data_ + other.data_);
-        }
-
-        Value operator*(const Value& other) const {
-            return Value(data_ * other.data_);
-        }
-
     private:
         double data_;
+        std::vector<std::shared_ptr<Value>> children_;
 };
 
-std::ostream& operator<<(std::ostream& os, const Value& value) {
-    os << "Value(" << value.data() << ")";
+std::ostream& operator<<(std::ostream& os, const std::shared_ptr<Value>& value) {
+    os << "Value(" << value->data() << ")";
     return os;
+}
+
+std::shared_ptr<Value> operator+(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
+    return Value::create(a->data() + b->data());
+}
+
+std::shared_ptr<Value> operator*(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
+    return Value::create(a->data() * b->data());
 }

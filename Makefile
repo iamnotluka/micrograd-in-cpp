@@ -3,3 +3,5 @@ build:
 
 run:
 	@if [ -f main ]; then ./main; else echo "No binary found. Run 'make build' first."; fi
+
+build-run: build run

@@ -1,13 +1,11 @@
 #include "value.h"
 #include <iostream>
 
-Value::Value(double data) : data_(data) {}
-
 // a*b + c = 10*5 + 4 = 54
 int main() {
-    Value a(10);
-    Value b(5);
-    Value c(4);
+    auto a = Value::create(10);
+    auto b = Value::create(5);
+    auto c = Value::create(4);
 
     std::cout << a*b + c << std::endl;
     return 0;
