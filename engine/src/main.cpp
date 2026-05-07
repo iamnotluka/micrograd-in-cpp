@@ -19,12 +19,7 @@ int main() {
     auto n = x1w1x2w2 + b; n->set_label("n");
 
     auto o = n->tanh(n); o->set_label("o");
-    o->set_grad(1);
     o->backward();
-    n->backward();
-    x1w1x2w2->backward();
-    x1w1->backward();
-    x2w2->backward();
 
     std::ofstream file("graph.dot");
     file << create_dot_graph_string(o);
