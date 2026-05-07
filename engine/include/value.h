@@ -8,11 +8,18 @@
 
 class Value {
     public:
+        Value(double data)
+            : data_(data), grad_(0), local_backward_([](){}) {}
+
         Value(double data, std::string label)
             : data_(data), label_(std::move(label)), grad_(0), local_backward_([](){}) {}
 
         Value(double data, std::vector<std::shared_ptr<Value>> prev, std::string op)
             : data_(data), prev_(std::move(prev)), op_(std::move(op)), grad_(0), local_backward_([](){}) {}
+
+        static std::shared_ptr<Value> create(double data) {
+            return std::make_shared<Value>(data);
+        }
 
         static std::shared_ptr<Value> create(double data, std::string label) {
             return std::make_shared<Value>(data, std::move(label));
@@ -83,7 +90,6 @@ class Value {
         std::string label_;
         double grad_;
         std::function<void()> local_backward_;
-        std::function<void()> backward_;
 };
 
 inline std::shared_ptr<Value> operator+(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
@@ -95,6 +101,14 @@ inline std::shared_ptr<Value> operator+(const std::shared_ptr<Value>& a, const s
     return new_value;
 }
 
+inline std::shared_ptr<Value> operator+(const std::shared_ptr<Value>& a, const double b) {      
+    return a + Value::create(b);                                                            
+}                                                                                               
+                                                                                            
+inline std::shared_ptr<Value> operator+(const double a, const std::shared_ptr<Value>& b) {      
+    return Value::create(a) + b;                                                          
+}
+
 inline std::shared_ptr<Value> operator-(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
     auto new_value = Value::create(a->data() - b->data(), {a, b}, "-");
     new_value->set_local_backward([a, b, new_value]() {
@@ -102,6 +116,14 @@ inline std::shared_ptr<Value> operator-(const std::shared_ptr<Value>& a, const s
         b->set_grad(b->grad() - new_value->grad());
     });
     return new_value;
+}
+
+inline std::shared_ptr<Value> operator-(const std::shared_ptr<Value>& a, const double b) {
+    return a - Value::create(b);
+}
+
+inline std::shared_ptr<Value> operator-(const double a, const std::shared_ptr<Value>& b) {
+    return Value::create(a) - b;
 }
 
 inline std::shared_ptr<Value> operator/(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
@@ -113,6 +135,15 @@ inline std::shared_ptr<Value> operator/(const std::shared_ptr<Value>& a, const s
     return new_value;
 }
 
+inline std::shared_ptr<Value> operator/(const std::shared_ptr<Value>& a, const double b) {
+    return a / Value::create(b);
+}
+
+inline std::shared_ptr<Value> operator/(const double a, const std::shared_ptr<Value>& b) {
+    return Value::create(a) / b;
+}
+
+
 inline std::shared_ptr<Value> operator*(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
     auto new_value = Value::create(a->data() * b->data(), {a, b}, "*");
     new_value->set_local_backward([a, b, new_value]() {
@@ -121,6 +152,15 @@ inline std::shared_ptr<Value> operator*(const std::shared_ptr<Value>& a, const s
     });
     return new_value;
 }
+
+inline std::shared_ptr<Value> operator*(const std::shared_ptr<Value>& a, const double b) {
+    return a * Value::create(b);
+}
+
+inline std::shared_ptr<Value> operator*(const double a, const std::shared_ptr<Value>& b) {
+    return Value::create(a) * b;
+}
+
 
 inline std::ostream& operator<<(std::ostream& os, const std::shared_ptr<Value>& value) {
     os << "Value(" << value->data() << ", op: " << value->op() << ", ";
