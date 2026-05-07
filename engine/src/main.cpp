@@ -4,23 +4,24 @@
 #include <fstream>
 
 int main() {
-    auto a = Value::create(-3, 'a');
-    auto b = Value::create(2, 'b');
-    auto c = Value::create(10, 'c');
+    auto x1 = Value::create(2.0, "x1");
+    auto x2 = Value::create(0.0, "x2");
 
-    auto e = a*b;
-    e->set_label('e');
+    auto w1 = Value::create(-3, "w1");
+    auto w2 = Value::create(1, "w2");
 
-    auto d = e + c;
-    d->set_label('d');
+    auto b = Value::create(6.7, "b");
 
-    auto f = Value::create(-2, 'f');
-    auto L = d*f; L->set_label('L');
+    auto x1w1 = x1*w1; x1w1->set_label("x1*w1");
+    auto x2w2 = x2*w2; x2w2->set_label("x2*w2");
+    auto x1w1x2w2 = x1w1 + x2w2; x1w1x2w2->set_label("x1*w1 + x2*w2");
 
-    std::cout << L << std::endl;
+    auto n = x1w1x2w2 + b;
+
+    auto o = n->tanh(n);
 
     std::ofstream file("graph.dot");
-    file << create_dot_graph_string(L);
+    file << create_dot_graph_string(o);
     file.close();
 
     return 0;

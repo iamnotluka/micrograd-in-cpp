@@ -10,7 +10,7 @@ int build_dot_graph(const std::shared_ptr<Value>& node, int& node_counter, std::
     std::string node_name = std::string("node") + std::to_string(node_id);
 
     std::string label_str = "";
-    if (node->label() != '\0') {
+    if (!node->label().empty()) {
         label_str += node->label();
         label_str += " | ";
     }

@@ -18,3 +18,9 @@ The browser fetches it once on page load and runs the WASM locally.
 As I build, I'll most probably hit concepts I'm meeting fresh and concepts I'm meeting again with more context. I learn best by writing things down and explaining them, so the deeper notes will live on my blog: www.zoricl.io
 
 Live demo: TODO
+
+### Usability
+
+Change expression in `main.cpp` by adjusting the values and expresson using the values:
+
+`make grap` will compile everything and run it for us
