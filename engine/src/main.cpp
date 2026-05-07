@@ -18,7 +18,8 @@ int main() {
 
     auto n = x1w1x2w2 + b; n->set_label("n");
 
-    auto o = n->tanh(n); o->set_label("o");
+    auto e = (2*n)->exp(2*n);
+    auto o = (e - 1)/(e + 1);
     o->backward();
 
     std::ofstream file("graph.dot");

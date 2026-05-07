@@ -83,6 +83,26 @@ class Value {
             return new_value;
         }
 
+        inline std::shared_ptr<Value> exp(const std::shared_ptr<Value>& a) {
+            double x = a->data();
+            double e = std::exp(x);
+
+            auto new_value = Value::create(e, {a}, "exp");
+            new_value->set_local_backward([a, e, new_value]() {
+                a->set_grad(a->grad() + new_value->grad() * e);
+            });
+
+            return new_value;
+        }
+
+        inline std::shared_ptr<Value> pow(const std::shared_ptr<Value>& a, double n) {
+            auto new_value = Value::create(std::pow(a->data(), n), {a}, "pow");
+            new_value->set_local_backward([a, n, new_value]() {
+                a->set_grad(a->grad() + new_value->grad() * n * std::pow(a->data(), n - 1));
+            });
+            return new_value;
+        }
+
     private:
         double data_;
         std::vector<std::shared_ptr<Value>> prev_;
@@ -142,7 +162,6 @@ inline std::shared_ptr<Value> operator/(const std::shared_ptr<Value>& a, const d
 inline std::shared_ptr<Value> operator/(const double a, const std::shared_ptr<Value>& b) {
     return Value::create(a) / b;
 }
-
 
 inline std::shared_ptr<Value> operator*(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
     auto new_value = Value::create(a->data() * b->data(), {a, b}, "*");
