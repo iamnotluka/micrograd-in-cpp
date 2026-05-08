@@ -89,3 +89,17 @@ Loss: 0.0109251
 Press Enter for next step (q to quit)...
 
 ```
+
+### Helpers
+
+- I have excluded the data/mnist folder, that I used to train the model. Use below to download it:
+```
+mkdir -p data/mnist
+cd data/mnist
+curl -LO https://storage.googleapis.com/cvdf-datasets/mnist/train-images-idx3-ubyte.gz
+curl -LO https://storage.googleapis.com/cvdf-datasets/mnist/train-labels-idx1-ubyte.gz
+curl -LO https://storage.googleapis.com/cvdf-datasets/mnist/t10k-images-idx3-ubyte.gz
+curl -LO https://storage.googleapis.com/cvdf-datasets/mnist/t10k-labels-idx1-ubyte.gz
+gunzip -k *.gz
+cd ../..
+```
