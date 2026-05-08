@@ -4,6 +4,7 @@
 #include <value.h>
 
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <random>
@@ -67,6 +68,31 @@ void update_parameters(
 ) {
     for (const auto& parameter : parameters) {
         parameter->set_data(parameter->data() - learning_rate * parameter->grad());
+    }
+}
+
+void save_parameters(
+    const std::string& path,
+    const std::vector<int>& architecture,
+    const std::vector<std::shared_ptr<Value>>& parameters
+) {
+    std::ofstream file(path);
+
+    if (!file) {
+        throw std::runtime_error(std::string("Could not open model file: ") + path);
+    }
+
+    file << architecture.size() << "\n";
+
+    for (int size : architecture) {
+        file << size << " ";
+    }
+
+    file << "\n";
+    file << parameters.size() << "\n";
+
+    for (const auto& parameter : parameters) {
+        file << parameter->data() << "\n";
     }
 }
 
@@ -161,6 +187,9 @@ int main(int argc, char* argv[]) {
                   << " epochs with learning rate " << learning_rate << "\n" << std::flush;
 
         train_model(model, samples, epochs, training_limit, learning_rate);
+
+        save_parameters("models/digits_mlp.params", {784, 32, 10}, parameters);
+        std::cout << "Saved model to models/digits_mlp.params\n";
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << "\n";
         return 1;

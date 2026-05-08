@@ -25,6 +25,7 @@ inspect-mnist:
 	./mnist_digits/inspect_mnist
 
 train-mnist:
+	mkdir -p models
 	clang++ -std=c++17 -I engine/include mnist_digits/train_mnist.cpp -o mnist_digits/train_mnist
 	./mnist_digits/train_mnist $(TRAIN_MNIST_ARGS)
 	
@@ -32,5 +33,3 @@ test:
 	clang++ -std=c++17 -I engine/include engine/tests/test_gradients.cpp -o test_gradients
 	./test_gradients
 
-%:
-	@:

@@ -57,3 +57,5 @@ data/mnist
 /mnist_digits/mnist_digits
 /mnist_digits/inspect_mnist
 /mnist_digits/train_mnist
+
+models
