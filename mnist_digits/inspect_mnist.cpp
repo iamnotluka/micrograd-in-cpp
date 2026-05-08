@@ -1,31 +1,10 @@
+#include "mnist_display.h"
 #include "mnist_loader.h"
 
 #include <string>
 
 void clear_screen() {
     std::cout << "\033[2J\033[H";
-}
-
-void print_digit(const MnistSample& sample) {
-    std::cout << "Label: " << sample.label << "\n\n";
-
-    for (int row = 0; row < 28; row++) {
-        for (int col = 0; col < 28; col++) {
-            double pixel = sample.pixels[row * 28 + col];
-
-            if (pixel > 0.75) {
-                std::cout << "#";
-            } else if (pixel > 0.35) {
-                std::cout << "+";
-            } else if (pixel > 0.10) {
-                std::cout << ".";
-            } else {
-                std::cout << " ";
-            }
-        }
-
-        std::cout << "\n";
-    }
 }
 
 void inspect_samples(const std::vector<MnistSample>& samples) {
@@ -60,7 +39,7 @@ void inspect_samples(const std::vector<MnistSample>& samples) {
 
         clear_screen();
         std::cout << "Sample " << sample_number << " of " << samples.size() << "\n";
-        print_digit(samples[sample_index]);
+        print_digit_with_label(samples[sample_index]);
         std::cout << "\n";
     }
 }
