@@ -1,29 +1,16 @@
 #include "value.h"
 #include "graph.h"
+#include <neuron.h>
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 int main() {
-    auto x1 = Value::create(2.0, "x1");
-    auto x2 = Value::create(0.0, "x2");
-
-    auto w1 = Value::create(-3, "w1");
-    auto w2 = Value::create(1, "w2");
-
-    auto b = Value::create(6.8813735870195432, "b");
-
-    auto x1w1 = x1*w1; x1w1->set_label("x1*w1");
-    auto x2w2 = x2*w2; x2w2->set_label("x2*w2");
-    auto x1w1x2w2 = x1w1 + x2w2; x1w1x2w2->set_label("x1*w1 + x2*w2");
-
-    auto n = x1w1x2w2 + b; n->set_label("n");
-
-    auto e = (2*n)->exp(2*n);
-    auto o = (e - 1)/(e + 1);
-    o->backward();
-
+    std::vector<std::shared_ptr<Value>> x = {Value::create(2.0), Value::create(3.0)};     
+    Neuron n(2);                                                                          
+    auto out = n(x);
     std::ofstream file("graph.dot");
-    file << create_dot_graph_string(o);
+    file << create_dot_graph_string(out);
     file.close();
 
     return 0;
