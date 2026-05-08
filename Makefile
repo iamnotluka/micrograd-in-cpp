@@ -10,3 +10,7 @@ graph: build
 	./main
 	dot -Tpng graph.dot -o graph.png
 	open graph.png
+
+training-sim:
+	clang++ -std=c++17 -I engine/include engine/src/manual_loss.cpp -o manual_loss
+	./manual_loss

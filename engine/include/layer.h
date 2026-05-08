@@ -27,6 +27,15 @@ class Layer {
             return outputs;
         }
 
+        std::vector<std::shared_ptr<Value>> parameters() {
+            std::vector<std::shared_ptr<Value>> parameters;
+            for (int i = 0; i < neurons_.size(); i++) {
+                std::vector<std::shared_ptr<Value>> neuron_parameters = neurons_[i]->parameters();
+                parameters.insert(parameters.end(), neuron_parameters.begin(), neuron_parameters.end());
+            }
+            return parameters;
+        }
+
     private:
         std::vector<std::shared_ptr<Neuron>> neurons_;
         int number_of_inputs_;

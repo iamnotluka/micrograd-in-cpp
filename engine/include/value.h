@@ -31,6 +31,8 @@ class Value {
 
         double data() const { return data_; }
 
+        void set_data(double data ) { data_ = data; }
+
         std::string op() const { return op_; }
 
         std::string label() const { return label_; }

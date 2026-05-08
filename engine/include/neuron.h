@@ -34,6 +34,12 @@ class Neuron {
             return activation->tanh(activation);
         }
 
+        std::vector<std::shared_ptr<Value>> parameters() {
+            std::vector<std::shared_ptr<Value>> parameters = weights_;
+            parameters.push_back(bias_);
+            return parameters;
+        }
+
     private:
         std::vector<std::shared_ptr<Value>> weights_;
         std::shared_ptr<Value> bias_;

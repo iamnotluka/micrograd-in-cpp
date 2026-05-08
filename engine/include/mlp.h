@@ -21,6 +21,14 @@ class MLP {
             return input_values;
         }
 
+        std::vector<std::shared_ptr<Value>> parameters() {
+            std::vector<std::shared_ptr<Value>> parameters;
+            for (int i = 0; i < layers_.size(); i++) {
+                std::vector<std::shared_ptr<Value>> layer_parameters = layers_[i]->parameters();
+                parameters.insert(parameters.end(), layer_parameters.begin(), layer_parameters.end());
+            }
+            return parameters;
+        }
     private:
         std::vector<std::shared_ptr<Layer>> layers_;
 };
