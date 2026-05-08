@@ -5,6 +5,7 @@
 #include <string>
 #include <functional>
 #include <set>
+#include <cmath>
 
 class Value {
     public:
@@ -78,8 +79,9 @@ class Value {
             double t = (std::exp(2*x) - 1) / (std::exp(2*x) + 1);
 
             auto new_value = Value::create(t, {a}, "tanh");
-            new_value->set_local_backward([a, t, new_value]() {
-                a->set_grad(a->grad() + new_value->grad() * (1-t*t));
+            Value* out = new_value.get();
+            new_value->set_local_backward([a, t, out]() {
+                a->set_grad(a->grad() + out->grad() * (1-t*t));
             });
 
             return new_value;
@@ -90,8 +92,9 @@ class Value {
             double e = std::exp(x);
 
             auto new_value = Value::create(e, {a}, "exp");
-            new_value->set_local_backward([a, e, new_value]() {
-                a->set_grad(a->grad() + new_value->grad() * e);
+            Value* out = new_value.get();
+            new_value->set_local_backward([a, e, out]() {
+                a->set_grad(a->grad() + out->grad() * e);
             });
 
             return new_value;
@@ -99,8 +102,9 @@ class Value {
 
         inline std::shared_ptr<Value> pow(const std::shared_ptr<Value>& a, double n) {
             auto new_value = Value::create(std::pow(a->data(), n), {a}, "pow");
-            new_value->set_local_backward([a, n, new_value]() {
-                a->set_grad(a->grad() + new_value->grad() * n * std::pow(a->data(), n - 1));
+            Value* out = new_value.get();
+            new_value->set_local_backward([a, n, out]() {
+                a->set_grad(a->grad() + out->grad() * n * std::pow(a->data(), n - 1));
             });
             return new_value;
         }
@@ -116,9 +120,10 @@ class Value {
 
 inline std::shared_ptr<Value> operator+(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
     auto new_value = Value::create(a->data() + b->data(), {a, b}, "+");
-    new_value->set_local_backward([a, b, new_value]() {
-        a->set_grad(a->grad() + new_value->grad());
-        b->set_grad(b->grad() + new_value->grad());
+    Value* out = new_value.get();
+    new_value->set_local_backward([a, b, out]() {
+        a->set_grad(a->grad() + out->grad());
+        b->set_grad(b->grad() + out->grad());
     });
     return new_value;
 }
@@ -133,9 +138,10 @@ inline std::shared_ptr<Value> operator+(const double a, const std::shared_ptr<Va
 
 inline std::shared_ptr<Value> operator-(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
     auto new_value = Value::create(a->data() - b->data(), {a, b}, "-");
-    new_value->set_local_backward([a, b, new_value]() {
-        a->set_grad(a->grad() + new_value->grad());
-        b->set_grad(b->grad() - new_value->grad());
+    Value* out = new_value.get();
+    new_value->set_local_backward([a, b, out]() {
+        a->set_grad(a->grad() + out->grad());
+        b->set_grad(b->grad() - out->grad());
     });
     return new_value;
 }
@@ -150,9 +156,10 @@ inline std::shared_ptr<Value> operator-(const double a, const std::shared_ptr<Va
 
 inline std::shared_ptr<Value> operator/(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
     auto new_value = Value::create(a->data() / b->data(), {a, b}, "/");
-    new_value->set_local_backward([a, b, new_value]() {
-        b->set_grad(b->grad() + new_value->grad() * (-a->data() / (b->data() * b->data())));
-        a->set_grad(a->grad() + new_value->grad() * (1 / b->data()));
+    Value* out = new_value.get();
+    new_value->set_local_backward([a, b, out]() {
+        b->set_grad(b->grad() + out->grad() * (-a->data() / (b->data() * b->data())));
+        a->set_grad(a->grad() + out->grad() * (1 / b->data()));
     });
     return new_value;
 }
@@ -167,9 +174,10 @@ inline std::shared_ptr<Value> operator/(const double a, const std::shared_ptr<Va
 
 inline std::shared_ptr<Value> operator*(const std::shared_ptr<Value>& a, const std::shared_ptr<Value>& b) {
     auto new_value = Value::create(a->data() * b->data(), {a, b}, "*");
-    new_value->set_local_backward([a, b, new_value]() {
-        a->set_grad(a->grad() + new_value->grad() * b->data());
-        b->set_grad(b->grad() + new_value->grad() * a->data());
+    Value* out = new_value.get();
+    new_value->set_local_backward([a, b, out]() {
+        a->set_grad(a->grad() + out->grad() * b->data());
+        b->set_grad(b->grad() + out->grad() * a->data());
     });
     return new_value;
 }

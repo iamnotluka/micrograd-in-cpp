@@ -4,6 +4,7 @@
 #include <iostream>
 #include <iomanip>
 #include <functional>
+#include <memory>
 
 const double H = 1e-6;
 const double TOLERANCE = 1e-4;
@@ -124,6 +125,25 @@ void test_composite() {
     check_gradient("composite d/db", b->grad(), numerical_gradient([&]() { return expr()->data(); }, b));
 }
 
+void test_values_do_not_self_reference() {
+    std::weak_ptr<Value> weak_result;
+
+    {
+        auto a = Value::create(2.0);
+        auto b = Value::create(3.0);
+        auto c = (a * b) + a;
+        weak_result = c;
+        c->backward();
+    }
+
+    bool was_destroyed = weak_result.expired();
+    std::cout << (was_destroyed ? "PASS" : "FAIL") << "  values do not self-reference" << std::endl;
+    if (!was_destroyed) {
+        assert(false);
+    }
+    std::cout << std::endl;
+}
+
 int main() {
     test_addition();
     test_multiplication();
@@ -133,6 +153,7 @@ int main() {
     test_tanh();
     test_exp();
     test_composite();
+    test_values_do_not_self_reference();
 
     std::cout << "\nAll gradient checks passed." << std::endl;
     return 0;
