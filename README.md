@@ -1,5 +1,7 @@
 # micrograd in CPP
 
+![micrograd in C++!](micrograd-in-cpp.png)
+
 - Inspired by Andrej Karpathy's lecture: https://www.youtube.com/watch?v=VMj-3S1tku0
 - Original micrograd repo: https://github.com/karpathy/micrograd
 
@@ -61,7 +63,7 @@ MLP mlp(2, std::vector<int>{4, 4, 1});
 
 Running `make graph` shows:
 
-![NN Graph](image.png)
+![NN Graph](image-graph.png)
 
 #### Training loop
 
