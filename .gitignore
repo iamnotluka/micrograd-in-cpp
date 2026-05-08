@@ -60,3 +60,5 @@ data/mnist
 /mnist_digits/predict_mnist
 
 models
+!demo/models/
+!demo/models/digits_mlp.params

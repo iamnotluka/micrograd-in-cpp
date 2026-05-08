@@ -1,6 +1,6 @@
 const GRID_SIZE = 28;
 const PIXEL_COUNT = GRID_SIZE * GRID_SIZE;
-const MODEL_PATHS = ["../models/digits_mlp.params", "./digits_mlp.params"];
+const MODEL_PATHS = ["./models/digits_mlp.params", "../models/digits_mlp.params", "./digits_mlp.params"];
 
 const canvas = document.querySelector("#digit-canvas");
 const context = canvas.getContext("2d", { willReadFrequently: false });
