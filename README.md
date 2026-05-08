@@ -54,6 +54,15 @@ Change expression in `main.cpp` by adjusting the values and expression using the
 
 `make graph` will compile everything, run it, and open a visual graph of the computation.
 
+```
+std::vector<std::shared_ptr<Value>> x = {Value::create(2.0), Value::create(3.0)};
+MLP mlp(2, std::vector<int>{4, 4, 1});
+```
+
+Running `make graph` shows:
+
+![NN Graph](image.png)
+
 #### Training loop
 
 `manual_loss.cpp` has a bare-bones training loop you can step through by hand. 
