@@ -49,3 +49,5 @@ CLAUDE.md
 main
 graph.dot
 graph.png
+manual_loss
+test_gradients

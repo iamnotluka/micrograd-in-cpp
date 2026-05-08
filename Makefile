@@ -14,3 +14,7 @@ graph: build
 training-sim:
 	clang++ -std=c++17 -I engine/include engine/src/manual_loss.cpp -o manual_loss
 	./manual_loss
+
+test:
+	clang++ -std=c++17 -I engine/include engine/tests/test_gradients.cpp -o test_gradients
+	./test_gradients

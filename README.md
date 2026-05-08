@@ -21,6 +21,12 @@ Live demo: TODO
 
 ### Usability
 
-Change expression in `main.cpp` by adjusting the values and expresson using the values:
+#### Visualising expressions
 
-`make grap` will compile everything and run it for us
+Change expression in `main.cpp` by adjusting the values and expression using the values. The output layer of an MLP is itself just a Value expression, so you can feed it straight into the graph.
+
+`make graph` will compile everything, run it, and open a visual graph of the computation.
+
+#### Training loop
+
+`manual_loss.cpp` has a bare-bones training loop you can step through by hand. It runs a forward pass, computes the loss, backpropagates, and nudges the parameters. Each time you press Enter you see the updated loss and predictions. Press `q` to quit.
