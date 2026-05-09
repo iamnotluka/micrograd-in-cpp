@@ -120,7 +120,7 @@ Or run the trainer directly after it has been built:
 
 The trainer shows a live terminal dashboard with forward/backward progress, loss, accuracy, throughput, elapsed time, and ETA.
 
-While training in an interactive terminal, press `p` or `space` to save a checkpoint and exit cleanly. The checkpoint is written to:
+While training in an interactive terminal, press `p` or `space` to save a checkpoint and the current model parameters, then exit cleanly. Pressing `Ctrl+C` also stops after the current sample and saves both files. The checkpoint is written to:
 
 ```
 models/digits_mlp.checkpoint
@@ -145,6 +145,9 @@ Useful options:
 ```
 ./mnist_digits/train_mnist 60000 5 0.1 --fresh
 ./mnist_digits/train_mnist 60000 5 0.1 --checkpoint models/my_run.checkpoint
+./mnist_digits/train_mnist 60000 5 0.1 --validation-limit 1000 --test-limit 1000
 ```
 
 `--fresh` ignores an existing checkpoint and starts over. `--checkpoint` lets you use a different checkpoint file.
+
+By default, the trainer evaluates 1,000 held-out validation samples after each epoch and 1,000 separate held-out test samples once training finishes. Set either limit to `0` to skip that evaluation.

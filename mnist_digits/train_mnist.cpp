@@ -27,7 +27,7 @@
 
 namespace {
     using Clock = std::chrono::steady_clock;
-    const std::vector<int> DIGITS_ARCHITECTURE = {784, 64, 32, 10};
+    const std::vector<int> DIGITS_ARCHITECTURE = {784, 32, 10};
     const std::string DEFAULT_MODEL_PATH = "models/digits_mlp.params";
     const std::string DEFAULT_CHECKPOINT_PATH = "models/digits_mlp.checkpoint";
     const std::string CHECKPOINT_MAGIC = "MICROGRAD_MNIST_CHECKPOINT";
@@ -42,6 +42,13 @@ namespace {
 
     struct EpochSummary {
         int epoch = 0;
+        double loss = 0.0;
+        double accuracy = 0.0;
+        double seconds = 0.0;
+    };
+
+    struct EvaluationResult {
+        int samples = 0;
         double loss = 0.0;
         double accuracy = 0.0;
         double seconds = 0.0;
@@ -62,6 +69,9 @@ namespace {
         double active_seconds_before_run = 0.0;
         PhaseTimers timers;
         std::vector<EpochSummary> completed_epochs;
+        bool has_last_validation = false;
+        int last_validation_epoch = 0;
+        EvaluationResult last_validation;
     };
 
     struct CheckpointData {
@@ -90,6 +100,8 @@ namespace {
         int training_limit = 50;
         int epochs = 2;
         double learning_rate = 0.01;
+        int validation_limit = 1000;
+        int test_limit = 1000;
         bool fresh_start = false;
         std::string checkpoint_path = DEFAULT_CHECKPOINT_PATH;
     };
@@ -97,17 +109,23 @@ namespace {
     struct TrainingResult {
         bool completed = false;
         bool checkpointed = false;
+        bool stopped = false;
         std::string checkpoint_path;
     };
 
     class TerminalControls;
 
     TerminalControls* active_terminal_controls = nullptr;
-    void restore_terminal_and_reraise(int signal);
+    volatile std::sig_atomic_t requested_stop_signal = 0;
+    void request_training_stop(int signal);
 
     class TerminalControls {
         public:
             TerminalControls() {
+                active_terminal_controls = this;
+                std::signal(SIGINT, request_training_stop);
+                std::signal(SIGTERM, request_training_stop);
+
                 if (!isatty(STDIN_FILENO)) {
                     return;
                 }
@@ -126,13 +144,12 @@ namespace {
                 }
 
                 enabled_ = true;
-                active_terminal_controls = this;
-                std::signal(SIGINT, restore_terminal_and_reraise);
-                std::signal(SIGTERM, restore_terminal_and_reraise);
             }
 
             ~TerminalControls() {
                 restore();
+                std::signal(SIGINT, SIG_DFL);
+                std::signal(SIGTERM, SIG_DFL);
 
                 if (active_terminal_controls == this) {
                     active_terminal_controls = nullptr;
@@ -167,13 +184,8 @@ namespace {
             termios original_terminal_{};
     };
 
-    void restore_terminal_and_reraise(int signal) {
-        if (active_terminal_controls != nullptr) {
-            active_terminal_controls->restore();
-        }
-
-        std::signal(signal, SIG_DFL);
-        std::raise(signal);
+    void request_training_stop(int signal) {
+        requested_stop_signal = signal;
     }
 
     std::string format_integer(long long value) {
@@ -258,6 +270,7 @@ namespace {
             TrainingDisplay(
                 int epochs,
                 int samples_per_epoch,
+                int validation_samples,
                 int parameter_count,
                 double learning_rate,
                 bool controls_enabled,
@@ -265,6 +278,7 @@ namespace {
             )
                 : epochs_(epochs),
                   samples_per_epoch_(samples_per_epoch),
+                  validation_samples_(validation_samples),
                   parameter_count_(parameter_count),
                   learning_rate_(learning_rate),
                   controls_enabled_(controls_enabled),
@@ -312,7 +326,7 @@ namespace {
                           << "   Updated: " << format_timestamp(std::chrono::system_clock::now()) << "\n\n";
                 std::cout << "Controls: "
                           << (controls_enabled_
-                                ? "p/space save checkpoint and exit, Ctrl+C stop"
+                                ? "p/space save checkpoint and params, Ctrl+C stop and save"
                                 : "not available because stdin is not a terminal")
                           << "\n";
                 std::cout << "Checkpoint: " << checkpoint_path_ << "\n";
@@ -340,6 +354,18 @@ namespace {
                           << "   learning rate: " << learning_rate_ << "\n";
                 std::cout << "Epoch loss: " << format_double(running_loss, 6)
                           << "   accuracy: " << format_double(running_accuracy, 2) << "%\n";
+                if (state.has_last_validation) {
+                    std::cout << "Latest validation: epoch " << state.last_validation_epoch
+                              << " | loss " << format_double(state.last_validation.loss, 6)
+                              << " | accuracy "
+                              << format_double(state.last_validation.accuracy * 100.0, 2) << "%"
+                              << " | " << format_integer(state.last_validation.samples)
+                              << " samples"
+                              << " | " << format_duration(state.last_validation.seconds) << "\n";
+                } else if (validation_samples_ > 0) {
+                    std::cout << "Latest validation: waiting for first completed epoch over "
+                              << format_integer(validation_samples_) << " samples\n";
+                }
 
                 if (state.last_label >= 0) {
                     std::cout << "Last sample: label " << state.last_label
@@ -382,6 +408,7 @@ namespace {
             const std::string spinner_frames_ = "|/-\\";
             int epochs_;
             int samples_per_epoch_;
+            int validation_samples_;
             int parameter_count_;
             double learning_rate_;
             bool controls_enabled_;
@@ -399,6 +426,10 @@ namespace {
 
     bool checkpoint_requested(TerminalControls& controls) {
         return controls.enabled() && is_checkpoint_key(controls.read_key());
+    }
+
+    bool stop_requested() {
+        return requested_stop_signal != 0;
     }
 }
 
@@ -440,6 +471,39 @@ void update_parameters(
     for (const auto& parameter : parameters) {
         parameter->set_data(parameter->data() - learning_rate * parameter->grad());
     }
+}
+
+EvaluationResult evaluate_model(
+    MLP& model,
+    const std::vector<MnistSample>& samples
+) {
+    EvaluationResult result;
+    result.samples = static_cast<int>(samples.size());
+
+    if (samples.empty()) {
+        return result;
+    }
+
+    auto started_at = Clock::now();
+    double total_loss = 0.0;
+    int correct_count = 0;
+
+    for (const MnistSample& sample : samples) {
+        auto input_values = pixels_to_values(sample.pixels);
+        auto logits = model(input_values);
+        auto loss = softmax_cross_entropy_loss(logits, sample.label);
+        int prediction = predicted_label(logits);
+
+        total_loss += loss->data();
+        if (prediction == sample.label) {
+            correct_count++;
+        }
+    }
+
+    result.loss = total_loss / result.samples;
+    result.accuracy = static_cast<double>(correct_count) / result.samples;
+    result.seconds = std::chrono::duration<double>(Clock::now() - started_at).count();
+    return result;
 }
 
 void save_parameters(
@@ -715,12 +779,15 @@ void save_checkpoint(
 TrainingResult train_model(
     MLP& model,
     const std::vector<MnistSample>& samples,
+    const std::vector<MnistSample>& validation_samples,
     int epochs,
     int training_limit,
     double learning_rate,
     const std::string& checkpoint_path,
     bool fresh_start
 ) {
+    requested_stop_signal = 0;
+
     if (epochs < 1) {
         throw std::runtime_error("Epoch count must be at least 1");
     }
@@ -785,6 +852,7 @@ TrainingResult train_model(
     TrainingDisplay display(
         epochs,
         training_limit,
+        static_cast<int>(validation_samples.size()),
         static_cast<int>(parameters.size()),
         learning_rate,
         controls.enabled(),
@@ -792,6 +860,32 @@ TrainingResult train_model(
     );
 
     display.render(state, true);
+
+    auto save_exit_checkpoint = [&](int epoch_index,
+                                    int next_sample_position,
+                                    double current_epoch_seconds,
+                                    bool stopped) -> TrainingResult {
+        state.phase = stopped ? "saving stop checkpoint" : "saving checkpoint";
+        display.render(state, true);
+        save_checkpoint(
+            checkpoint_path,
+            parameters,
+            epochs,
+            training_limit,
+            learning_rate,
+            epoch_index,
+            next_sample_position,
+            current_epoch_seconds,
+            state.active_seconds_before_run
+                + std::chrono::duration<double>(Clock::now() - run_started_at).count(),
+            state,
+            rng,
+            sample_indices
+        );
+        state.phase = stopped ? "stop checkpoint saved" : "checkpoint saved";
+        display.render(state, true);
+        return {false, true, stopped, checkpoint_path};
+    };
 
     for (int epoch = start_epoch; epoch < epochs; epoch++) {
         auto epoch_started_at = Clock::now();
@@ -813,28 +907,16 @@ TrainingResult train_model(
             std::shuffle(sample_indices.begin(), sample_indices.end(), rng);
         }
 
-        if (checkpoint_requested(controls)) {
-            state.phase = "saving checkpoint";
-            display.render(state, true);
-            save_checkpoint(
-                checkpoint_path,
-                parameters,
-                epochs,
-                training_limit,
-                learning_rate,
+        bool pause_requested = checkpoint_requested(controls);
+        bool stopping = stop_requested();
+        if (pause_requested || stopping) {
+            return save_exit_checkpoint(
                 epoch,
                 epoch_start_position,
                 current_epoch_seconds_before_run
                     + std::chrono::duration<double>(Clock::now() - epoch_started_at).count(),
-                state.active_seconds_before_run
-                    + std::chrono::duration<double>(Clock::now() - run_started_at).count(),
-                state,
-                rng,
-                sample_indices
+                stopping
             );
-            state.phase = "checkpoint saved";
-            display.render(state, true);
-            return {false, true, checkpoint_path};
         }
 
         double total_loss = state.epoch_loss;
@@ -902,28 +984,16 @@ TrainingResult train_model(
             state.phase = "sample complete";
             display.render(state);
 
-            if (checkpoint_requested(controls)) {
-                state.phase = "saving checkpoint";
-                display.render(state, true);
-                save_checkpoint(
-                    checkpoint_path,
-                    parameters,
-                    epochs,
-                    training_limit,
-                    learning_rate,
+            pause_requested = checkpoint_requested(controls);
+            stopping = stop_requested();
+            if (pause_requested || stopping) {
+                return save_exit_checkpoint(
                     epoch,
                     position + 1,
                     current_epoch_seconds_before_run
                         + std::chrono::duration<double>(Clock::now() - epoch_started_at).count(),
-                    state.active_seconds_before_run
-                        + std::chrono::duration<double>(Clock::now() - run_started_at).count(),
-                    state,
-                    rng,
-                    sample_indices
+                    stopping
                 );
-                state.phase = "checkpoint saved";
-                display.render(state, true);
-                return {false, true, checkpoint_path};
             }
         }
 
@@ -934,6 +1004,15 @@ TrainingResult train_model(
 
         state.completed_epochs.push_back({epoch + 1, average_loss, accuracy, epoch_seconds});
         state.samples_completed_in_epoch = training_limit;
+
+        if (!validation_samples.empty()) {
+            state.phase = "validating";
+            display.render(state, true);
+            state.last_validation = evaluate_model(model, validation_samples);
+            state.last_validation_epoch = epoch + 1;
+            state.has_last_validation = true;
+        }
+
         state.phase = "epoch complete";
         display.render(state, true);
         state.resumed_from_checkpoint = false;
@@ -941,7 +1020,7 @@ TrainingResult train_model(
 
     state.phase = "training complete";
     display.render(state, true);
-    return {true, false, checkpoint_path};
+    return {true, false, stop_requested(), checkpoint_path};
 }
 
 int main(int argc, char* argv[]) {
@@ -959,6 +1038,16 @@ int main(int argc, char* argv[]) {
                     throw std::runtime_error("--checkpoint requires a path");
                 }
                 options.checkpoint_path = argv[++i];
+            } else if (argument == "--validation-limit") {
+                if (i + 1 >= argc) {
+                    throw std::runtime_error("--validation-limit requires a sample count");
+                }
+                options.validation_limit = std::stoi(argv[++i]);
+            } else if (argument == "--test-limit") {
+                if (i + 1 >= argc) {
+                    throw std::runtime_error("--test-limit requires a sample count");
+                }
+                options.test_limit = std::stoi(argv[++i]);
             } else if (argument.rfind("--", 0) == 0) {
                 throw std::runtime_error(std::string("Unknown option: ") + argument);
             } else {
@@ -969,7 +1058,8 @@ int main(int argc, char* argv[]) {
         if (positional_arguments.size() > 3) {
             throw std::runtime_error(
                 "Usage: train_mnist [training_limit] [epochs] [learning_rate] "
-                "[--fresh] [--checkpoint path]"
+                "[--fresh] [--checkpoint path] [--validation-limit samples] "
+                "[--test-limit samples]"
             );
         }
 
@@ -983,13 +1073,54 @@ int main(int argc, char* argv[]) {
             options.learning_rate = std::stod(positional_arguments[2]);
         }
 
-        auto samples = load_mnist_dataset(
+        if (options.validation_limit < 0 || options.test_limit < 0) {
+            throw std::runtime_error("Validation and test limits cannot be negative");
+        }
+
+        auto training_samples = load_mnist_dataset(
             "data/mnist/train-images-idx3-ubyte",
             "data/mnist/train-labels-idx1-ubyte",
             options.training_limit
         );
 
-        std::cout << "Loaded " << samples.size() << " MNIST samples\n" << std::flush;
+        options.training_limit = std::min(
+            options.training_limit,
+            static_cast<int>(training_samples.size())
+        );
+
+        std::vector<MnistSample> validation_samples;
+        std::vector<MnistSample> test_samples;
+        int evaluation_limit = options.validation_limit + options.test_limit;
+
+        if (evaluation_limit > 0) {
+            auto evaluation_samples = load_mnist_dataset(
+                "data/mnist/t10k-images-idx3-ubyte",
+                "data/mnist/t10k-labels-idx1-ubyte",
+                evaluation_limit
+            );
+
+            int validation_count = std::min(
+                options.validation_limit,
+                static_cast<int>(evaluation_samples.size())
+            );
+            validation_samples.assign(
+                evaluation_samples.begin(),
+                evaluation_samples.begin() + validation_count
+            );
+
+            int remaining_evaluation_samples =
+                static_cast<int>(evaluation_samples.size()) - validation_count;
+            int test_count = std::min(options.test_limit, remaining_evaluation_samples);
+            test_samples.assign(
+                evaluation_samples.begin() + validation_count,
+                evaluation_samples.begin() + validation_count + test_count
+            );
+        }
+
+        std::cout << "Loaded " << training_samples.size() << " MNIST training samples\n";
+        std::cout << "Loaded " << validation_samples.size() << " validation samples and "
+                  << test_samples.size() << " test samples from the held-out MNIST set\n"
+                  << std::flush;
 
         std::vector<int> layer_outputs(
             DIGITS_ARCHITECTURE.begin() + 1,
@@ -1005,6 +1136,9 @@ int main(int argc, char* argv[]) {
         std::cout << "Training on " << options.training_limit
                   << " samples for " << options.epochs
                   << " epochs with learning rate " << options.learning_rate << "\n";
+        std::cout << "Validation: " << validation_samples.size()
+                  << " samples after each epoch"
+                  << "   Final test: " << test_samples.size() << " samples\n";
         std::cout << "Checkpoint path: " << options.checkpoint_path << "\n";
         if (options.fresh_start && checkpoint_exists(options.checkpoint_path)) {
             std::cout << "Ignoring existing checkpoint because --fresh was provided\n";
@@ -1013,7 +1147,8 @@ int main(int argc, char* argv[]) {
 
         TrainingResult result = train_model(
             model,
-            samples,
+            training_samples,
+            validation_samples,
             options.epochs,
             options.training_limit,
             options.learning_rate,
@@ -1022,10 +1157,27 @@ int main(int argc, char* argv[]) {
         );
 
         if (result.checkpointed) {
-            std::cout << "\nSaved checkpoint to " << result.checkpoint_path << "\n";
+            save_parameters(DEFAULT_MODEL_PATH, DIGITS_ARCHITECTURE, parameters);
+            std::cout << "\n"
+                      << (result.stopped ? "Stopped training." : "Paused training.")
+                      << "\n";
+            std::cout << "Saved checkpoint to " << result.checkpoint_path << "\n";
+            std::cout << "Saved current model parameters to " << DEFAULT_MODEL_PATH << "\n";
             std::cout << "Run the same command again to continue from that checkpoint.\n";
             std::cout << "Use --fresh if you want to ignore it and start over.\n";
             return 0;
+        }
+
+        if (!result.stopped && !test_samples.empty()) {
+            std::cout << "\nEvaluating final test set...\n" << std::flush;
+            EvaluationResult test_result = evaluate_model(model, test_samples);
+            std::cout << "Test loss: " << format_double(test_result.loss, 6)
+                      << "   accuracy: "
+                      << format_double(test_result.accuracy * 100.0, 2) << "%"
+                      << "   samples: " << format_integer(test_result.samples)
+                      << "   time: " << format_duration(test_result.seconds) << "\n";
+        } else if (result.stopped) {
+            std::cout << "\nStopped training before final test evaluation.\n";
         }
 
         save_parameters(DEFAULT_MODEL_PATH, DIGITS_ARCHITECTURE, parameters);
