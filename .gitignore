@@ -10,8 +10,6 @@
 
 # Personal notes (not for distribution)
 docs/*
-!docs/engine-optimization-tasks.md
-!docs/weight-initialization-and-training-stability.md
 
 # C++ build artefacts
 build/
