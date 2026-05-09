@@ -18,11 +18,7 @@
 
     <main>
       <div class="title-row">
-        <div>
-          <h1>Draw a digit</h1>
-          <p class="subtle">28 x 28 input · 784 values · 10 outputs</p>
-        </div>
-        <p class="model-status" id="model-status">loading model</p>
+        <p class="instruction">Draw a digit</p>
       </div>
 
       <section class="demo-grid" aria-label="digit classifier">
@@ -49,6 +45,7 @@
         </div>
 
         <aside class="prediction-panel" aria-label="prediction">
+          <p class="model-status" id="model-status">loading model</p>
           <div class="prediction-top">
             <span class="label">prediction</span>
             <output class="predicted-digit" id="predicted-digit">-</output>

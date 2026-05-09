@@ -140,7 +140,7 @@ async function loadModel() {
 
       const text = await response.text();
       model = BrowserMLP.fromParams(text);
-      statusOutput.textContent = `${model.architecture.join(" -> ")} ready`;
+      statusOutput.textContent = `MLP ${model.architecture.join(" -> ")} ready`;
       statusOutput.classList.add("is-ready");
       queuePrediction();
       return;
@@ -267,9 +267,21 @@ function updateConfidenceBars(confidence, bestIndex) {
     const { row, fill, value: valueLabel } = confidenceRows[digit];
 
     row.classList.toggle("is-best", digit === bestIndex);
+    row.style.setProperty("--confidence-color", confidenceColor(value));
     fill.style.width = `${percent.toFixed(2)}%`;
     valueLabel.textContent = `${percent.toFixed(1)}%`;
   });
+}
+
+function confidenceColor(value) {
+  const clamped = clamp(value, 0, 1);
+  const background = [216, 217, 217];
+  const accent = [31, 118, 111];
+  const mixed = background.map((channel, index) => {
+    return Math.round(channel + (accent[index] - channel) * clamped);
+  });
+
+  return `rgb(${mixed.join(", ")})`;
 }
 
 function softmax(values, scale = 1) {
