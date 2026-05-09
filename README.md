@@ -103,3 +103,48 @@ curl -LO https://storage.googleapis.com/cvdf-datasets/mnist/t10k-labels-idx1-uby
 gunzip -k *.gz
 cd ../..
 ```
+
+#### Training MNIST
+
+Build and train the digit model with:
+
+```
+make train-mnist 60000 5 0.1
+```
+
+Or run the trainer directly after it has been built:
+
+```
+./mnist_digits/train_mnist 60000 5 0.1
+```
+
+The trainer shows a live terminal dashboard with forward/backward progress, loss, accuracy, throughput, elapsed time, and ETA.
+
+While training in an interactive terminal, press `p` or `space` to save a checkpoint and exit cleanly. The checkpoint is written to:
+
+```
+models/digits_mlp.checkpoint
+```
+
+Run the same command again to continue from that checkpoint:
+
+```
+./mnist_digits/train_mnist 60000 5 0.1
+```
+
+When training finishes, the final model is saved to:
+
+```
+models/digits_mlp.params
+```
+
+The checkpoint is removed after a successful full training run.
+
+Useful options:
+
+```
+./mnist_digits/train_mnist 60000 5 0.1 --fresh
+./mnist_digits/train_mnist 60000 5 0.1 --checkpoint models/my_run.checkpoint
+```
+
+`--fresh` ignores an existing checkpoint and starts over. `--checkpoint` lets you use a different checkpoint file.
