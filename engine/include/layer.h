@@ -6,9 +6,9 @@
 
 class Layer {
     public:
-        Layer(int number_of_inputs, int number_of_outputs) {
+        Layer(int number_of_inputs, int number_of_outputs, Activation activation = Activation::Tanh) {
             for (int i = 0; i < number_of_outputs; i++) {
-                neurons_.push_back(std::make_shared<Neuron>(number_of_inputs));
+                neurons_.push_back(std::make_shared<Neuron>(number_of_inputs, activation));
             }
             number_of_inputs_ = number_of_inputs;
         }

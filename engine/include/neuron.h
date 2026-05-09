@@ -5,9 +5,15 @@
 #include <random>
 #include <stdexcept>
 
+enum class Activation {
+    Tanh,
+    Linear
+};
+
 class Neuron {
     public:
-        Neuron(int number_of_inputs) {            
+        Neuron(int number_of_inputs, Activation activation = Activation::Tanh)
+            : activation_(activation) {
             std::random_device rd;
             std::mt19937 gen(rd());
             double limit = 1.0 / std::sqrt(number_of_inputs);
@@ -33,6 +39,10 @@ class Neuron {
 
             activation = activation + bias_;
 
+            if (activation_ == Activation::Linear) {
+                return activation;
+            }
+
             return activation->tanh(activation);
         }
 
@@ -45,4 +55,5 @@ class Neuron {
     private:
         std::vector<std::shared_ptr<Value>> weights_;
         std::shared_ptr<Value> bias_;
+        Activation activation_;
 };

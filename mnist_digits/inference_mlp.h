@@ -113,7 +113,9 @@ class InferenceMLP {
             std::vector<std::vector<double>> layer_activations;
             layer_activations.reserve(layers_.size());
 
-            for (const auto& layer : layers_) {
+            for (size_t layer_index = 0; layer_index < layers_.size(); layer_index++) {
+                const auto& layer = layers_[layer_index];
+                bool is_output_layer = layer_index == layers_.size() - 1;
                 std::vector<double> next_values;
                 next_values.reserve(layer.neurons.size());
 
@@ -124,7 +126,7 @@ class InferenceMLP {
                         activation += neuron.weights[i] * current_values[i];
                     }
 
-                    next_values.push_back(std::tanh(activation));
+                    next_values.push_back(is_output_layer ? activation : std::tanh(activation));
                 }
 
                 layer_activations.push_back(next_values);

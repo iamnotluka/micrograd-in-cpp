@@ -1,5 +1,6 @@
 #include "mnist_loader.h"
 
+#include <loss.h>
 #include <mlp.h>
 #include <value.h>
 
@@ -26,11 +27,11 @@
 
 namespace {
     using Clock = std::chrono::steady_clock;
-    const std::vector<int> DIGITS_ARCHITECTURE = {784, 32, 10};
+    const std::vector<int> DIGITS_ARCHITECTURE = {784, 64, 32, 10};
     const std::string DEFAULT_MODEL_PATH = "models/digits_mlp.params";
     const std::string DEFAULT_CHECKPOINT_PATH = "models/digits_mlp.checkpoint";
     const std::string CHECKPOINT_MAGIC = "MICROGRAD_MNIST_CHECKPOINT";
-    const int CHECKPOINT_VERSION = 1;
+    const int CHECKPOINT_VERSION = 2;
 
     struct PhaseTimers {
         double forward_seconds = 0.0;
@@ -188,6 +189,20 @@ namespace {
     std::string format_double(double value, int precision) {
         std::ostringstream output;
         output << std::fixed << std::setprecision(precision) << value;
+        return output.str();
+    }
+
+    std::string format_architecture(const std::vector<int>& architecture) {
+        std::ostringstream output;
+
+        for (size_t i = 0; i < architecture.size(); i++) {
+            if (i > 0) {
+                output << " -> ";
+            }
+
+            output << architecture[i];
+        }
+
         return output.str();
     }
 
@@ -396,26 +411,6 @@ std::vector<std::shared_ptr<Value>> pixels_to_values(const std::vector<double>& 
     }
 
     return values;
-}
-
-std::vector<double> target_for_label(int label) {
-    std::vector<double> target(10, -1.0);
-    target[label] = 1.0;
-    return target;
-}
-
-std::shared_ptr<Value> calculate_loss(
-    const std::vector<std::shared_ptr<Value>>& predictions,
-    const std::vector<double>& target
-) {
-    auto loss = Value::create(0.0);
-
-    for (size_t i = 0; i < predictions.size(); i++) {
-        auto diff = predictions[i] - target[i];
-        loss = loss + diff->pow(diff, 2.0);
-    }
-
-    return loss / static_cast<double>(predictions.size());
 }
 
 int predicted_label(const std::vector<std::shared_ptr<Value>>& predictions) {
@@ -854,7 +849,7 @@ TrainingResult train_model(
             auto phase_started_at = Clock::now();
 
             auto input_values = pixels_to_values(sample.pixels);
-            auto predictions = model(input_values);
+            auto logits = model(input_values);
 
             state.timers.forward_seconds += std::chrono::duration<double>(
                 Clock::now() - phase_started_at
@@ -864,9 +859,8 @@ TrainingResult train_model(
             display.render(state);
             phase_started_at = Clock::now();
 
-            auto target = target_for_label(sample.label);
-            auto loss = calculate_loss(predictions, target);
-            int prediction = predicted_label(predictions);
+            auto loss = softmax_cross_entropy_loss(logits, sample.label);
+            int prediction = predicted_label(logits);
 
             total_loss += loss->data();
 
@@ -997,10 +991,15 @@ int main(int argc, char* argv[]) {
 
         std::cout << "Loaded " << samples.size() << " MNIST samples\n" << std::flush;
 
-        MLP model(784, {32, 10});
+        std::vector<int> layer_outputs(
+            DIGITS_ARCHITECTURE.begin() + 1,
+            DIGITS_ARCHITECTURE.end()
+        );
+        MLP model(DIGITS_ARCHITECTURE.front(), layer_outputs, Activation::Linear);
         auto parameters = model.parameters();
 
-        std::cout << "Created MLP with 784 inputs, 32 hidden neurons, 10 outputs\n";
+        std::cout << "Created MLP with architecture "
+                  << format_architecture(DIGITS_ARCHITECTURE) << "\n";
         std::cout << "Parameter count: " << parameters.size() << "\n";
 
         std::cout << "Training on " << options.training_limit

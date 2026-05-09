@@ -84,7 +84,10 @@ class BrowserMLP {
 
     let current = Array.from(input);
 
-    for (const layer of this.layers) {
+    for (let layerIndex = 0; layerIndex < this.layers.length; layerIndex++) {
+      const layer = this.layers[layerIndex];
+      const isOutputLayer = layerIndex === this.layers.length - 1;
+
       current = layer.map((neuron) => {
         let activation = neuron.bias;
 
@@ -92,7 +95,7 @@ class BrowserMLP {
           activation += neuron.weights[i] * current[i];
         }
 
-        return Math.tanh(activation);
+        return isOutputLayer ? activation : Math.tanh(activation);
       });
     }
 
@@ -254,7 +257,7 @@ function updatePrediction() {
   }
 
   const outputs = model.forward(pixels);
-  const confidence = softmax(outputs, 4);
+  const confidence = softmax(outputs);
   const bestIndex = argmax(confidence);
 
   predictedDigitOutput.textContent = String(bestIndex);

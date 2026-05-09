@@ -1,4 +1,5 @@
 #include "value.h"
+#include "loss.h"
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -107,6 +108,32 @@ void test_exp() {
     check_gradient("exp d/da", a->grad(), numerical_gradient([&]() { return a->exp(a)->data(); }, a));
 }
 
+void test_softmax_cross_entropy() {
+    auto a = Value::create(1.2);
+    auto b = Value::create(-0.7);
+    auto c = Value::create(0.3);
+    std::vector<std::shared_ptr<Value>> logits = {a, b, c};
+
+    auto loss = softmax_cross_entropy_loss(logits, 2);
+    loss->backward();
+
+    check_gradient(
+        "softmax cross entropy d/da",
+        a->grad(),
+        numerical_gradient([&]() { return softmax_cross_entropy_loss(logits, 2)->data(); }, a)
+    );
+    check_gradient(
+        "softmax cross entropy d/db",
+        b->grad(),
+        numerical_gradient([&]() { return softmax_cross_entropy_loss(logits, 2)->data(); }, b)
+    );
+    check_gradient(
+        "softmax cross entropy d/dc",
+        c->grad(),
+        numerical_gradient([&]() { return softmax_cross_entropy_loss(logits, 2)->data(); }, c)
+    );
+}
+
 void test_composite() {
     auto a = Value::create(2.0);
     auto b = Value::create(3.0);
@@ -152,6 +179,7 @@ int main() {
     test_pow();
     test_tanh();
     test_exp();
+    test_softmax_cross_entropy();
     test_composite();
     test_values_do_not_self_reference();
 

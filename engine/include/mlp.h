@@ -1,15 +1,28 @@
 #include <layer.h>
+#include <memory>
+#include <stdexcept>
 #include <vector>
 
 class MLP {
     public:
-        MLP(int number_of_inputs, std::vector<int> layer_outputs) {
+        MLP(
+            int number_of_inputs,
+            std::vector<int> layer_outputs,
+            Activation output_activation = Activation::Tanh
+        ) {
+            if (layer_outputs.empty()) {
+                throw std::invalid_argument("MLP needs at least one output layer");
+            }
+
             std::vector<int> sizes = {number_of_inputs};
             sizes.insert(sizes.end(), layer_outputs.begin(), layer_outputs.end());
             auto number_of_layers = layer_outputs.size();
 
-            for (int i = 0; i < number_of_layers; i++) {
-                layers_.push_back(std::make_shared<Layer>(sizes[i], sizes[i+1]));
+            for (size_t i = 0; i < number_of_layers; i++) {
+                Activation activation = i == number_of_layers - 1
+                    ? output_activation
+                    : Activation::Tanh;
+                layers_.push_back(std::make_shared<Layer>(sizes[i], sizes[i+1], activation));
             }
         }
 
