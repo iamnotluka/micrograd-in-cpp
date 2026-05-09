@@ -1,6 +1,7 @@
 #include <vector>
 #include <memory>
 #include <value.h>
+#include <cmath>
 #include <random>
 #include <stdexcept>
 
@@ -9,7 +10,8 @@ class Neuron {
         Neuron(int number_of_inputs) {            
             std::random_device rd;
             std::mt19937 gen(rd());
-            std::uniform_real_distribution<double> dist(-1.0, 1.0);
+            double limit = 1.0 / std::sqrt(number_of_inputs);
+            std::uniform_real_distribution<double> dist(-limit, limit);
 
             for (int i = 0; i < number_of_inputs; i++) {
                 weights_.push_back(std::make_shared<Value>(dist(gen)));

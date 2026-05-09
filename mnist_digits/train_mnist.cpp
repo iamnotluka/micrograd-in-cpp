@@ -56,6 +56,7 @@ namespace {
         double last_loss = 0.0;
         int last_label = -1;
         int last_prediction = -1;
+        std::string notice;
         bool resumed_from_checkpoint = false;
         double active_seconds_before_run = 0.0;
         PhaseTimers timers;
@@ -302,7 +303,11 @@ namespace {
                 std::cout << "Checkpoint: " << checkpoint_path_ << "\n";
                 std::cout << "Status: "
                           << (state.resumed_from_checkpoint ? "resumed from checkpoint" : "running")
-                          << "\n\n";
+                          << "\n";
+                if (!state.notice.empty()) {
+                    std::cout << "Notice: " << state.notice << "\n";
+                }
+                std::cout << "\n";
 
                 std::cout << "Epoch   " << state.epoch << "/" << epochs_
                           << "   done " << format_integer(state.samples_completed_in_epoch)
@@ -745,35 +750,39 @@ TrainingResult train_model(
     double current_epoch_seconds_before_run = 0.0;
 
     if (!fresh_start && checkpoint_exists(checkpoint_path)) {
-        CheckpointData checkpoint = load_checkpoint(checkpoint_path);
-        validate_checkpoint(
-            checkpoint,
-            epochs,
-            training_limit,
-            learning_rate,
-            parameters.size()
-        );
+        try {
+            CheckpointData checkpoint = load_checkpoint(checkpoint_path);
+            validate_checkpoint(
+                checkpoint,
+                epochs,
+                training_limit,
+                learning_rate,
+                parameters.size()
+            );
 
-        apply_parameter_values(parameters, checkpoint.parameters);
-        sample_indices = checkpoint.sample_indices;
-        rng = checkpoint.rng;
-        start_epoch = checkpoint.epoch_index;
-        start_position = checkpoint.next_sample_position;
-        current_epoch_seconds_before_run = checkpoint.current_epoch_seconds;
+            apply_parameter_values(parameters, checkpoint.parameters);
+            sample_indices = checkpoint.sample_indices;
+            rng = checkpoint.rng;
+            start_epoch = checkpoint.epoch_index;
+            start_position = checkpoint.next_sample_position;
+            current_epoch_seconds_before_run = checkpoint.current_epoch_seconds;
 
-        state.epoch = checkpoint.epoch_index + 1;
-        state.samples_completed_in_epoch = checkpoint.next_sample_position;
-        state.samples_completed = checkpoint.samples_completed;
-        state.phase = "resumed from checkpoint";
-        state.epoch_loss = checkpoint.current_epoch_loss;
-        state.epoch_correct = checkpoint.current_epoch_correct;
-        state.last_loss = checkpoint.last_loss;
-        state.last_label = checkpoint.last_label;
-        state.last_prediction = checkpoint.last_prediction;
-        state.resumed_from_checkpoint = true;
-        state.active_seconds_before_run = checkpoint.active_seconds;
-        state.timers = checkpoint.timers;
-        state.completed_epochs = checkpoint.completed_epochs;
+            state.epoch = checkpoint.epoch_index + 1;
+            state.samples_completed_in_epoch = checkpoint.next_sample_position;
+            state.samples_completed = checkpoint.samples_completed;
+            state.phase = "resumed from checkpoint";
+            state.epoch_loss = checkpoint.current_epoch_loss;
+            state.epoch_correct = checkpoint.current_epoch_correct;
+            state.last_loss = checkpoint.last_loss;
+            state.last_label = checkpoint.last_label;
+            state.last_prediction = checkpoint.last_prediction;
+            state.resumed_from_checkpoint = true;
+            state.active_seconds_before_run = checkpoint.active_seconds;
+            state.timers = checkpoint.timers;
+            state.completed_epochs = checkpoint.completed_epochs;
+        } catch (const std::exception& error) {
+            state.notice = "ignored existing checkpoint: " + std::string(error.what());
+        }
     }
 
     TerminalControls controls;
